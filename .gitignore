@@ -1,0 +1,11 @@
+# ignore all files in the checkpoints folder
+checkpoints/
+
+# claude
+.claude/
+
+# python
+__pycache__/
+
+# MacOS
+.DS_Store
