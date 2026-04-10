@@ -27,7 +27,7 @@ The clean exact identity is the fixed-reference KL-regularized case:
 - This is exactly equivalent to reverse-KL projection onto the Gibbs-reweighted target
   `pi_star(y|x) propto pi_ref(y|x) exp(r(x,y)/beta)`.
 
-That bridge is already documented in the internal note at `projects/llm-rl-kl-duality/docs/theory-bridge.md`. It is the strongest current "RL vs distillation" statement because it is an objective identity, not an analogy.
+This is the strongest current "RL vs distillation" statement because it is an objective identity, not an analogy. A stable LLM-facing external reference for this bridge is the DPO derivation in `2305.18290`.
 
 ### 3. Most practical post-training algorithms are not exact fixed-reference KL-RL
 
@@ -131,7 +131,7 @@ That decomposition is what the first experiment contract now uses.
 
 Primary sources used for this note:
 
-1. Internal bridge note: `projects/llm-rl-kl-duality/docs/theory-bridge.md`
+1. `2305.18290` - `Direct Preference Optimization: Your Language Model is Secretly a Reward Model`
 2. `2502.06781` - `Exploring the Limit of Outcome Reward for Learning Mathematical Reasoning`
 3. `2505.13775` - `Beyond Semantics: The Unreasonable Effectiveness of Reasonless Intermediate Tokens`
 4. `2510.14901` - `Reasoning with Sampling: Your Base Model is Smarter Than You Think`
