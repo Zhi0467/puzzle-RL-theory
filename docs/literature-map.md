@@ -1,6 +1,6 @@
 # RL vs SFT Literature Map
 
-Last updated: 2026-04-12 02:57 UTC
+Last updated: 2026-04-12 05:22 UTC
 
 ## Research object
 
@@ -117,6 +117,49 @@ Their fix is dense, step-wise similarity reward over expert actions. This sugges
 3. Can any claimed RL gain be compressed back into a supervised dataset without losing most of the gain?
 4. What is the right operational definition of "distribution expansion" in a reasoning setting: lower base-policy likelihood, new algorithm family, improved OOD transfer, or something else?
 
+## Follow-up objects after the first Athena pass
+
+The initial literature map was good enough to set the support-expansion criterion, but the collaborator then asked for deeper grounding on zero-KL RL, SePT's status, and the sourcing behind the diversity / on-policy claims. The detailed note is now `zero-kl-and-exploration.md`. The short version is:
+
+### A. The exact reverse-KL bridge does not survive literal `beta = 0`
+
+For `beta > 0`, the fixed-reference KL bridge is exact. As `beta -> 0`, the Gibbs targets converge to ref-weighted reward maximizers. But literal `beta = 0` removes the fixed reference from the objective and leaves a set-valued reward-maximization problem rather than a unique reverse-KL projection target.
+
+That is why zero-KL reasoning RL should be described as an empirical algorithm family, not as a direct corollary of the fixed-reference bridge.
+
+### B. Recent zero-KL evidence exists, but it is empirical rather than theorem-level
+
+The strongest clean source here is `Open-Reasoner-Zero` (`2503.24290`), which explicitly studies PPO-style reasoning RL without KL regularization and reports strong stability/performance in that setting. `DeepSeek-R1` (`2501.12948`) is related but supports a slightly different point: pure RL from a base model can work, while also producing drift that later stages repair.
+
+The safe interpretation is that explicit fixed-reference KL is not the only workable stabilizer. Strong initialization, clipping / old-policy ratios, simple rule-based rewards, and low-variance baselines can also stabilize training.
+
+### C. SePT is self-sharpening, not importance-corrected off-policy RL
+
+`SePT` (`2510.18814`) does not use an off-policy correction term. It samples at low temperature, trains with ordinary NLL, and refreshes the sampled data online. The paper's own theoretical framing is an occupancy-weighted forward-KL projection onto a low-temperature self-teacher.
+
+So the real lesson from SePT is not "off-policy beats on-policy." It is that, in single-turn reasoning, online self-generated supervision plus temperature-decoupled sharpening can recover part of the gain often attributed to RL.
+
+### D. The diversity-preserving claim is better sourced now, but still not fully proved
+
+The best current supporting set is:
+
+1. `LaDi-RL` (`2602.01705`)
+2. `Reasoning with Exploration: An Entropy Perspective` (`2506.14758`)
+3. `Rethinking Entropy Regularization in Large Reasoning Models` (`2509.25133`)
+4. `Beyond the Exploration-Exploitation Trade-off: A Hidden State Approach for LLM Reasoning in RLVR` (`2509.23808`)
+
+These papers support the weaker claim that some methods preserve or broaden successful-support coverage better than standard token-space RL. They do not yet prove the stronger claim that training created successful reasoning modes that were absent from the base model's low-probability tail.
+
+### E. The long-horizon on-policy claim is an inference across sources, not a law
+
+The strongest supporting set is:
+
+1. `RobotxR1` (`2505.03238`) for closed-loop embodied RL;
+2. `Supervised Reinforcement Learning` (`2510.25992`) for dense guidance in hard multi-step regimes;
+3. `Self-Distillation Enables Continual Learning` (`2601.19897`) for on-policy distillation in sequential learning.
+
+This is enough to justify putting agentic / long-horizon on-policy learning on the research agenda. It is not enough to claim that on-policy RL always dominates static supervision once horizons grow.
+
 ## Athena consult update: the operational support-expansion rule
 
 On 2026-04-12 02:57 UTC, Athena re-checked the same fixed evidence set with one narrow question: what should count as actual support expansion rather than mere probability-mass reallocation? The sharpened rule is:
@@ -147,12 +190,13 @@ The current maze repo is already useful because it lets us measure answer correc
 
 1. trajectory source: fixed expert traces vs online self-generated traces vs verifier-filtered best-of-N traces;
 2. feedback type: none, binary outcome reward, dense step-wise reward;
-3. optimizer family: pure SFT, search-plus-distill, reward-free online self-training, RLVR, later diversity-preserving RL.
+3. optimizer family: pure SFT, search-plus-distill, reward-free online self-training, on-policy supervision, RLVR, later diversity-preserving RL.
 
-That decomposition is what the first experiment contract now uses, and the new Athena rule makes two controls non-negotiable in any later ``support expansion'' claim:
+That decomposition is what the first experiment contract now uses, and the new Athena rule makes three controls non-negotiable in any later ``support expansion'' claim:
 
 1. matched large-k base-model search; and
-2. matched search-plus-distill or reward-free online-refresh baselines.
+2. matched search-plus-distill or reward-free online-refresh baselines; and
+3. matched on-policy supervision on the same rollout support.
 
 ## Source list
 
@@ -167,3 +211,11 @@ Primary sources used for this note:
 7. `2601.04537` - `Not All Steps are Informative: On the Linearity of LLMs' RLVR Training`
 8. `2602.01705` - `Beyond Mode Elicitation: Diversity-Preserving Reinforcement Learning via Latent Diffusion Reasoner`
 9. `2507.10616` - `Scalpel vs. Hammer: GRPO Amplifies Existing Capabilities, SFT Replaces Them`
+10. `2501.12948` - `DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning`
+11. `2503.24290` - `Open-Reasoner-Zero: An Open Source Approach to Scaling Up Reinforcement Learning on the Base Model`
+12. `2505.03238` - `RobotxR1: Enabling Embodied Robotic Intelligence on Large Language Models through Closed-Loop Reinforcement Learning`
+13. `2506.14758` - `Reasoning with Exploration: An Entropy Perspective`
+14. `2509.25133` - `Rethinking Entropy Regularization in Large Reasoning Models`
+15. `2509.23808` - `Beyond the Exploration-Exploitation Trade-off: A Hidden State Approach for LLM Reasoning in RLVR`
+16. `2601.18734` - `Self-Distilled Reasoner: On-Policy Self-Distillation for Large Language Models`
+17. `2601.19897` - `Self-Distillation Enables Continual Learning`
