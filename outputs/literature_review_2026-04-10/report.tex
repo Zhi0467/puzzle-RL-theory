@@ -1,0 +1,243 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=black, urlcolor=blue}
+\setlist[itemize]{leftmargin=1.5em}
+\setlist[enumerate]{leftmargin=1.5em}
+
+\title{Puzzle RL Theory:\\Follow-up on Zero-KL, SePT, and Exploration}
+\author{Murphy}
+\date{2026-04-12 05:22 UTC}
+
+\begin{document}
+\maketitle
+
+\section*{Scope}
+
+This note answers the four follow-up questions that came after the first Athena-backed theory pass:
+
+\begin{enumerate}
+\item what the fixed-reference KL bridge does and does not imply at literal $\beta = 0$;
+\item whether SePT is actually using off-policy correction;
+\item how strong the current evidence is for diversity-preserving support expansion and for on-policy learning mattering more in long-horizon settings;
+\item what the puzzle program should test next if search, self-training, and on-policy supervision already recover much of sparse RL.
+\end{enumerate}
+
+\section*{Short read}
+
+\begin{enumerate}
+\item The exact reverse-KL bridge is a \emph{positive-$\beta$ fixed-reference} statement. As $\beta \to 0$, the Gibbs targets converge to ref-weighted reward maximizers, but literal $\beta = 0$ removes the fixed-reference target and leaves plain reward maximization with generally many optima.
+\item Recent zero-KL reasoning-RL results do exist. The cleanest source is \emph{Open-Reasoner-Zero} (`2503.24290`), which reports stable PPO-style reasoning RL without KL regularization. That is empirical evidence, not a new theorem replacing the KL bridge.
+\item SePT is not importance-corrected off-policy RL. It is low-temperature self-generation plus ordinary NLL on those self-samples, which the paper interprets as an occupancy-weighted forward-KL projection onto a sharpened self-teacher.
+\item The best current support for genuine support broadening is still suggestive rather than decisive. The stronger papers are LaDi-RL plus newer entropy / hidden-state exploration work, but Reasoning with Sampling, RLVR linearity, and Scalpel vs.\ Hammer still caution that much of current RL is mode sharpening over already-latent good behavior.
+\item The maze contract should now separate: large-$k$ search, best-of-$N$ plus cloning, SePT-style self-training, on-policy supervision, KL-RL, zero-KL RL, dense credit, and only then exploration-first methods.
+\end{enumerate}
+
+\section*{1. Zero-KL RL}
+
+\subsection*{What the bridge says, and where it stops}
+
+For $\beta > 0$, the clean fixed-reference object is
+\[
+J(\pi)=\mathbb{E}_x\left[\mathbb{E}_{y \sim \pi}[r(x,y)]-\beta\,\mathrm{KL}\!\left(\pi(\cdot \mid x)\,\|\,\pi_{\mathrm{ref}}(\cdot \mid x)\right)\right],
+\]
+whose optimizer is the Gibbs-reweighted target
+\[
+\pi^\star_\beta(y \mid x)\propto \pi_{\mathrm{ref}}(y \mid x)\exp(r(x,y)/\beta).
+\]
+
+That is the exact reverse-KL bridge. But it is only an exact bridge for the fixed-reference, positive-$\beta$ case.
+
+Let $A_x = \arg\max_y r(x,y)$. As $\beta \to 0$, non-maximizers lose mass and the limit over maximizers is just $\pi_{\mathrm{ref}}$ restricted to $A_x$. Literal $\beta = 0$ is different: the objective becomes plain reward maximization, so any reward-maximizing policy is optimal. The unique Gibbs target disappears. So:
+
+\begin{itemize}
+\item $\beta \to 0$ still has a ref-weighted limiting target;
+\item $\beta = 0$ no longer has the exact reverse-KL interpretation.
+\end{itemize}
+
+\subsection*{What recent zero-KL evidence actually exists}
+
+The cleanest source-backed zero-KL reasoning paper in the current set is \emph{Open-Reasoner-Zero} (`2503.24290`). It studies PPO-style reasoning RL without KL regularization and reports that removing KL loss / KL penalty gives the best stability and final performance.
+
+\emph{DeepSeek-R1} (`2501.12948`) is adjacent evidence rather than the cleanest zero-KL ablation paper. Its `R1-Zero` stage shows that pure RL from a base model can induce strong reasoning behavior without a preliminary SFT warm start, but it also shows the failure modes: readability drift and language mixing that later stages have to repair.
+
+\subsection*{Why zero-KL can work without refuting the stability story}
+
+Removing explicit fixed-reference KL removes one stabilizer, not every stabilizer. The plausible stabilizers in the current LLM reasoning setting are:
+
+\begin{enumerate}
+\item strong initialization from a capable base model;
+\item old-policy/current-policy ratios and clipping in PPO-style updates;
+\item low-variance advantage estimation or group-score baselines;
+\item simple rule-based rewards rather than learned noisy reward models;
+\item templates, postprocessing, or cold-start data that keep behavior legible.
+\end{enumerate}
+
+So the safe conclusion is narrow: explicit KL is not necessary in every reasoning-RL setup, but zero-KL success is still an empirical algorithmic fact, not a new objective identity.
+
+\section*{2. SePT and the on/off-policy question}
+
+\subsection*{Direct answer}
+
+SePT does \emph{not} use importance weighting or an off-policy correction term. Its core loop is:
+
+\begin{enumerate}
+\item generate low-temperature self-samples;
+\item train on those samples with ordinary negative log-likelihood;
+\item refresh the sampled dataset online.
+\end{enumerate}
+
+\subsection*{How the paper itself interprets that objective}
+
+The paper's own theoretical framing is sharper than ``just an engineering trick.'' Within one round, the SePT loss is an occupancy-weighted forward-KL projection onto the current low-temperature self-teacher. The key theorem then says:
+
+\begin{itemize}
+\item if $\tau_s < \tau_t$, pairwise logit margins are amplified;
+\item if $\tau_s = \tau_t$, the expected first-order gradient vanishes;
+\item if $\tau_s > \tau_t$, the mismatch becomes destructive.
+\end{itemize}
+
+So SePT is best read as \emph{online self-sharpening with a better signal-to-noise ratio}, not as corrected off-policy RL.
+
+\subsection*{What SePT does and does not imply}
+
+SePT is only a narrow counterexample to the slogan ``on-policy is always better.'' It shows that, in single-turn reasoning, online self-generated supervision plus temperature-decoupled sharpening can recover part of the gain often attributed to RL. It does \emph{not} show:
+
+\begin{itemize}
+\item that off-policy learning is generally better than on-policy learning;
+\item that reward optimization is unnecessary in interactive settings;
+\item or that low-temperature self-sampling is a substitute for exploration.
+\end{itemize}
+
+\subsection*{Why on-policy supervision still needs its own baseline}
+
+Two later papers sharpen this comparator:
+
+\begin{itemize}
+\item \emph{Self-Distilled Reasoner} (`2601.18734`) studies on-policy self-distillation and argues that dense teacher supervision along on-policy student rollouts can match or beat RL-style optimization in some reasoning settings.
+\item \emph{Self-Distillation Enables Continual Learning} (`2601.19897`) shows that on-policy distillation can outperform offline distillation from the same teacher and can preserve long-form reasoning behavior better than plain SFT.
+\end{itemize}
+
+These matter because they isolate a question the puzzle project should ask directly: if matched on-policy supervision already reproduces the gain, then the extra effect is not obviously reward-specific.
+
+\section*{3. How strong are the diversity and long-horizon claims?}
+
+\subsection*{A. Diversity-preserving RL may broaden support}
+
+The strongest support in the current set is still suggestive rather than decisive.
+
+\emph{LaDi-RL} (`2602.01705`) is the sharpest direct paper: it argues that standard token-space RL collapses diversity, while latent-space exploration improves both pass@1 and pass@k. Three newer exploration papers push the same direction:
+
+\begin{enumerate}
+\item \emph{Reasoning with Exploration: An Entropy Perspective} (`2506.14758`)
+\item \emph{Rethinking Entropy Regularization in Large Reasoning Models} (`2509.25133`)
+\item \emph{Beyond the Exploration-Exploitation Trade-off: A Hidden State Approach for LLM Reasoning in RLVR} (`2509.23808`)
+\end{enumerate}
+
+What they establish is the weaker claim:
+
+\begin{quote}
+some methods seem able to preserve or broaden successful-support coverage better than standard token-space RL.
+\end{quote}
+
+What they do \emph{not} yet establish is the stronger claim:
+
+\begin{quote}
+training created successful reasoning modes that were absent from the base model's low-probability tail.
+\end{quote}
+
+The main cautionary papers still pull the other way:
+
+\begin{itemize}
+\item \emph{Reasoning with Sampling} (`2510.14901`) says better search over the base model can already recover much of the gain;
+\item \emph{On the Linearity of LLMs' RLVR Training} (`2601.04537`) says RLVR often amplifies early-found directions rather than discovering qualitatively new ones throughout training;
+\item \emph{Scalpel vs.\ Hammer} (`2507.10616`) explicitly argues that GRPO mostly amplifies existing capabilities;
+\item \emph{Beyond Semantics} (`2505.13775`) warns that better final answers do not automatically mean better reasoning traces.
+\end{itemize}
+
+\subsection*{B. On-policy learning may matter more in long-horizon settings}
+
+The current evidence is best treated as an inference across papers, not a law.
+
+The strongest supporting set is:
+
+\begin{itemize}
+\item \emph{RobotxR1} (`2505.03238`) for closed-loop embodied RL;
+\item \emph{Supervised Reinforcement Learning} (`2510.25992`) for dense guidance when correct multi-step trajectories are too rare to sample;
+\item \emph{Self-Distillation Enables Continual Learning} (`2601.19897`) for on-policy distillation in sequential learning.
+\end{itemize}
+
+This is enough to justify putting agentic / long-horizon on-policy learning on the research agenda. It is not enough to claim that on-policy RL always dominates static supervision once horizons grow.
+
+\section*{4. What this changes in the puzzle program}
+
+\subsection*{Baseline ladder}
+
+The maze contract should now separate the following objects in order:
+
+\begin{enumerate}
+\item large-$k$ base-model search;
+\item best-of-$N$ plus behavior cloning;
+\item SePT-style reward-free online self-training;
+\item on-policy supervision or distillation on student rollouts;
+\item sparse binary-outcome RL, with KL and zero-KL variants separated explicitly;
+\item dense step-wise reward or action-level supervision;
+\item only then exploration-first variants such as archive-return, novelty bonuses, selective entropy, or latent/hidden-state exploration.
+\end{enumerate}
+
+\subsection*{Exploration families worth importing if plain supervision is already strong}
+
+If search, self-training, and on-policy supervision already recover most sparse-RL gains, the next algorithms should target settings where sharpening alone is structurally insufficient. The most promising families are:
+
+\begin{enumerate}
+\item archive-return-explore methods inspired by \emph{Go-Explore} (`1901.10995`);
+\item novelty bonuses such as \emph{Random Network Distillation} (`1810.12894`);
+\item selective entropy control inspired by the entropy papers and \emph{Soft Actor-Critic} (`1801.01290`);
+\item latent-space or hidden-state exploration in the style of LaDi-RL and the hidden-state RLVR paper;
+\item skill-discovery pretraining inspired by \emph{Diversity is All You Need} (`1802.06070`);
+\item later, genuinely closed-loop text-tool environments informed by \emph{RobotxR1} and the robotics survey (`2408.03539`).
+\end{enumerate}
+
+\subsection*{Measurement change}
+
+The measurement change is simple but non-negotiable: track distinct successful trajectory clusters, partial-state coverage, and time-to-first-success on the hard slice. Without those three objects, the project cannot tell support expansion from a sharper way of revisiting already-latent good modes.
+
+\section*{Bottom line}
+
+The clean bridge is still the positive-$\beta$ fixed-reference KL story. Zero-KL reasoning RL can work, but the clean evidence is ORZ, not a theorem saying KL never mattered. SePT is not off-policy correction; it is online self-sharpening with a low-temperature self-teacher, which makes it a strong baseline against sparse RL in static reasoning domains. The strongest current evidence for genuine support broadening comes from diversity-preserving exploration papers, but it is still suggestive and does not yet beat the search-and-sharpening interpretation cleanly. The strongest current evidence that on-policy learning matters more in long-horizon settings comes from embodied and sequential-learning papers, but that is still an inference across sources rather than a controlled law. That is why the puzzle program now has to separate search, self-training, on-policy supervision, KL-RL, zero-KL RL, and only then exploration-first algorithms.
+
+\section*{Sources}
+
+\begin{enumerate}
+\item \href{https://arxiv.org/abs/2305.18290}{arXiv:2305.18290} -- \emph{Direct Preference Optimization: Your Language Model is Secretly a Reward Model}
+\item \href{https://arxiv.org/abs/2501.12948}{arXiv:2501.12948} -- \emph{DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning}
+\item \href{https://arxiv.org/abs/2502.06781}{arXiv:2502.06781} -- \emph{Exploring the Limit of Outcome Reward for Learning Mathematical Reasoning}
+\item \href{https://arxiv.org/abs/2503.24290}{arXiv:2503.24290} -- \emph{Open-Reasoner-Zero: An Open Source Approach to Scaling Up Reinforcement Learning on the Base Model}
+\item \href{https://arxiv.org/abs/2505.03238}{arXiv:2505.03238} -- \emph{RobotxR1: Enabling Embodied Robotic Intelligence on Large Language Models through Closed-Loop Reinforcement Learning}
+\item \href{https://arxiv.org/abs/2505.13775}{arXiv:2505.13775} -- \emph{Beyond Semantics: The Unreasonable Effectiveness of Reasonless Intermediate Tokens}
+\item \href{https://arxiv.org/abs/2506.14758}{arXiv:2506.14758} -- \emph{Reasoning with Exploration: An Entropy Perspective}
+\item \href{https://arxiv.org/abs/2507.10616}{arXiv:2507.10616} -- \emph{Scalpel vs. Hammer: GRPO Amplifies Existing Capabilities, SFT Replaces Them}
+\item \href{https://arxiv.org/abs/2510.14901}{arXiv:2510.14901} -- \emph{Reasoning with Sampling: Your Base Model is Smarter Than You Think}
+\item \href{https://arxiv.org/abs/2510.18814}{arXiv:2510.18814} -- \emph{A Model Can Help Itself: Reward-Free Self-Training for LLM Reasoning}
+\item \href{https://arxiv.org/abs/2510.25992}{arXiv:2510.25992} -- \emph{Supervised Reinforcement Learning: From Expert Trajectories to Step-wise Reasoning}
+\item \href{https://arxiv.org/abs/2509.23808}{arXiv:2509.23808} -- \emph{Beyond the Exploration-Exploitation Trade-off: A Hidden State Approach for LLM Reasoning in RLVR}
+\item \href{https://arxiv.org/abs/2509.25133}{arXiv:2509.25133} -- \emph{Rethinking Entropy Regularization in Large Reasoning Models}
+\item \href{https://arxiv.org/abs/2601.04537}{arXiv:2601.04537} -- \emph{Not All Steps are Informative: On the Linearity of LLMs' RLVR Training}
+\item \href{https://arxiv.org/abs/2601.18734}{arXiv:2601.18734} -- \emph{Self-Distilled Reasoner: On-Policy Self-Distillation for Large Language Models}
+\item \href{https://arxiv.org/abs/2601.19897}{arXiv:2601.19897} -- \emph{Self-Distillation Enables Continual Learning}
+\item \href{https://arxiv.org/abs/2602.01705}{arXiv:2602.01705} -- \emph{Beyond Mode Elicitation: Diversity-Preserving Reinforcement Learning via Latent Diffusion Reasoner}
+\item \href{https://arxiv.org/abs/1810.12894}{arXiv:1810.12894} -- \emph{Exploration by Random Network Distillation}
+\item \href{https://arxiv.org/abs/1801.01290}{arXiv:1801.01290} -- \emph{Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor}
+\item \href{https://arxiv.org/abs/1802.06070}{arXiv:1802.06070} -- \emph{Diversity is All You Need: Learning Skills without a Reward Function}
+\item \href{https://arxiv.org/abs/1901.10995}{arXiv:1901.10995} -- \emph{Go-Explore: a New Approach for Hard-Exploration Problems}
+\item \href{https://arxiv.org/abs/2408.03539}{arXiv:2408.03539} -- \emph{Deep Reinforcement Learning for Robotics: A Survey of Real-World Successes}
+\item \href{https://arxiv.org/abs/2501.11533}{arXiv:2501.11533} -- \emph{The impact of intrinsic rewards on exploration in Reinforcement Learning}
+\end{enumerate}
+
+\end{document}
