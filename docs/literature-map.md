@@ -1,6 +1,6 @@
 # RL vs SFT Literature Map
 
-Last updated: 2026-04-10 23:35 UTC
+Last updated: 2026-04-12 02:57 UTC
 
 ## Research object
 
@@ -117,6 +117,30 @@ Their fix is dense, step-wise similarity reward over expert actions. This sugges
 3. Can any claimed RL gain be compressed back into a supervised dataset without losing most of the gain?
 4. What is the right operational definition of "distribution expansion" in a reasoning setting: lower base-policy likelihood, new algorithm family, improved OOD transfer, or something else?
 
+## Athena consult update: the operational support-expansion rule
+
+On 2026-04-12 02:57 UTC, Athena re-checked the same fixed evidence set with one narrow question: what should count as actual support expansion rather than mere probability-mass reallocation? The sharpened rule is:
+
+- only call a result ``support expansion'' if, on a fixed hard slice, the post-RL policy emits trace-valid successful trajectories at a non-trivial rate that the pre-RL model still cannot recover under larger-k sampling/search and positive-support distillation controls.
+
+This makes the control structure much more concrete than the first literature pass. The most useful consequences are:
+
+### Strongest evidence, ordered from strongest to weaker
+
+1. On held-out hard prompts, the base model still has near-zero success even after aggressive search, while the post-RL policy now succeeds directly.
+2. That advantage survives best-of-N plus cloning and reward-free online self-training controls.
+3. The new successful traces live in reasoning-pattern clusters that were absent or vanishingly rare in base-model samples and early RL checkpoints.
+4. The gain shows up in step-level trace validity, not only in final-answer correctness.
+5. pass@1 rises without pass@k or diversity collapsing.
+
+### What does not count on its own
+
+1. Higher final-answer accuracy alone.
+2. Higher pass@1 when base-model search already nearly matches the gain.
+3. The fact that RL found good trajectories at all, if best-of-N search plus cloning can already recover them.
+4. Improvements that also appear under reward-free online self-training with refreshed data.
+5. Longer, more natural-looking, or more semantically plausible traces.
+
 ## Implications for the puzzle project
 
 The current maze repo is already useful because it lets us measure answer correctness, path validity, and path optimality in a fully controlled setting. The main experimental lesson from the literature is that the project should not compare "SFT" versus "RL" as a single axis. It should separately manipulate:
@@ -125,7 +149,10 @@ The current maze repo is already useful because it lets us measure answer correc
 2. feedback type: none, binary outcome reward, dense step-wise reward;
 3. optimizer family: pure SFT, search-plus-distill, reward-free online self-training, RLVR, later diversity-preserving RL.
 
-That decomposition is what the first experiment contract now uses.
+That decomposition is what the first experiment contract now uses, and the new Athena rule makes two controls non-negotiable in any later ``support expansion'' claim:
+
+1. matched large-k base-model search; and
+2. matched search-plus-distill or reward-free online-refresh baselines.
 
 ## Source list
 

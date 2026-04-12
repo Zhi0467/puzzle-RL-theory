@@ -1,6 +1,6 @@
 # Puzzle Experiment Contract
 
-Last updated: 2026-04-10 23:35 UTC
+Last updated: 2026-04-12 02:57 UTC
 
 ## Goal
 
@@ -128,6 +128,9 @@ Maze graphs from the existing generator.
    - distill the discovered successful trajectories back into a plain SFT model,
    - then measure how much of the gain survives
 4. OOD transfer after matched in-domain training
+5. trajectory-cluster novelty:
+   - compare successful trace/action clusters from base sampling, early RL checkpoints, and the final policy
+   - ask whether RL only amplifies early-found clusters or actually adds new successful ones
 
 ### Process diagnostics
 
@@ -140,6 +143,10 @@ Maze graphs from the existing generator.
    - search failure despite nearby valid alternatives
 
 ## Decision rules
+
+### Primary operational criterion
+
+Claim ``support expansion'' only if, on a fixed hard slice, the post-trained policy emits trace-valid successful trajectories at a meaningful rate that the pre-trained model still cannot reach under larger-k search and positive-support distillation controls.
 
 ### Evidence for mostly mode elicitation / sharpening
 
@@ -155,11 +162,22 @@ Interpret the result as mostly sharpening if most of the following happen:
 
 Treat the result as stronger evidence for support expansion only if several harder conditions hold:
 
-1. RL finds successful trajectories that large-k base sampling almost never finds;
-2. those trajectories have consistently low base-model likelihood before training;
-3. pass@1 and pass@k both improve, or at least pass@k does not collapse;
-4. gains survive on structural OOD splits;
-5. the effect does not disappear when matched search-plus-distill and reward-free online baselines are included.
+1. the base model still has near-zero success on the hard slice even after aggressive best-of-N or search-based decoding;
+2. the post-RL advantage survives matched best-of-N plus cloning and reward-free online-refresh baselines;
+3. successful post-RL traces live in clusters that were absent or vanishingly rare in base samples and early RL checkpoints;
+4. step-level trace validity improves, not only final-answer accuracy;
+5. pass@1 and pass@k both improve, or at least pass@k and diversity do not collapse;
+6. gains survive on structural OOD splits.
+
+### What does not count on its own
+
+Do not treat the following as support-expansion evidence by themselves:
+
+1. higher final-answer accuracy alone;
+2. higher pass@1 when large-k base search already nearly matches the result;
+3. good trajectories that search-plus-distill can already recover;
+4. gains reproduced by reward-free online self-training;
+5. longer or more natural-looking reasoning traces.
 
 ### Evidence that dense credit assignment matters
 

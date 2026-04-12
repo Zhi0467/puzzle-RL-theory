@@ -1,6 +1,6 @@
 # Puzzle RL Theory Roadmap
 
-Last updated: 2026-04-10 23:35 UTC
+Last updated: 2026-04-12 02:57 UTC
 Project slug: `puzzle-rl-theory`
 
 Remote strategy status: `github remote active`.
@@ -8,9 +8,9 @@ Canonical repo: `git@github.com:Zhi0467/puzzle-RL-theory.git`
 
 ## Current Status
 
-- Active milestone: Milestone 0 (theory map and experiment contract).
+- Active milestone: Milestone 0 (consult-backed theory map and experiment contract).
 - Current repo reality: the codebase supports supervised maze pretraining/midtraining plus evaluation; there is no RL path yet.
-- Immediate objective: convert the first paper pass into an executable maze experiment order that separates sampling, online refresh, sparse RL, and dense credit assignment.
+- Immediate objective: land the Athena-backed theory surface for collaborator review; code planning remains deliberately paused until that literature-plus-consult pass is accepted.
 - Later intended domains: maze first, then Sudoku or related verifiable puzzles once the mechanism questions are sharper.
 
 ## Milestone 0 - Theory Map And Decision Surface
@@ -90,3 +90,4 @@ Gate criteria:
 
 - 2026-04-10 00:45 UTC: Initialized the durable project documentation surface for the RL-theory program inside the existing `puzzle-RL-theory` GitHub repo instead of creating a parallel local-only scaffold. The repo already contained a compact maze-search codebase with supervised `pretrain` / `midtrain` stages and evaluation, which is useful because it gives a clean controlled environment while making the current limitation explicit: the later RL comparison work has not been implemented yet. The current milestone is therefore theory-first rather than code-first.
 - 2026-04-10 23:35 UTC: Finished the first literature-grounded theory pass and translated it into a concrete puzzle experiment contract. The new read is sharper than the original "RL vs SFT" framing: the evidence in the supplied paper set suggests that ordinary token-space RL gains often decompose into sampling/search, online data refresh, and credit assignment rather than one monolithic "RL effect". The current durable docs now separate safe exact claims (fixed-reference KL-RL bridge), strong empirical regularities (distribution sharpening, diversity collapse, trace-semantics mismatch), and the regimes where RL-like learning may still add something real (zero-success settings needing dense step-wise signal, and possibly diversity-preserving exploration). Added `docs/literature-map.md`, `docs/experiment-contract.md`, and the collaborator-facing PDF bundle under `outputs/literature_review_2026-04-10/`.
+- 2026-04-12 02:57 UTC: Athena consult succeeded from this worker after the earlier MCP failures. Mode: `standard`. Turns: `1`. Question: what is the sharpest operational criterion for saying that RL expanded capability/support rather than merely reallocating probability mass over already-latent successful trajectories? Key insight: do not call support expansion unless the post-RL policy emits trace-valid successful trajectories on a fixed hard slice that the pre-RL model still cannot recover under larger-k search and positive-support distillation controls. The consult also sharpened the evidence ordering: matched search controls, matched search-plus-distill or reward-free online-refresh baselines, trace-cluster novelty, and pass@k/diversity preservation all matter; pass@1 alone does not. Updated `docs/research-scope.md`, `docs/literature-map.md`, `docs/experiment-contract.md`, `backlog.md`, and the collaborator-facing PDF to make that rule durable. Full consult record: `.agent/runtime/consult_history/1775775928.265109.jsonl`.

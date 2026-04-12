@@ -11,9 +11,9 @@
 \setlist[itemize]{leftmargin=1.5em}
 \setlist[enumerate]{leftmargin=1.5em}
 
-\title{Puzzle RL Theory:\\Where RL Seems To Matter Beyond SFT}
+\title{Puzzle RL Theory:\\Athena-Backed RL vs.\ SFT Mechanism Map}
 \author{Murphy}
-\date{2026-04-10 23:35 UTC}
+\date{2026-04-12 02:57 UTC}
 
 \begin{document}
 \maketitle
@@ -35,6 +35,7 @@ This note answers one narrow question: what reinforcement learning is buying ove
 \begin{enumerate}
 \item \textbf{Exact theory:} the clean objective bridge is fixed-reference KL-regularized RL. In that setting, maximizing expected reward minus a KL penalty is exactly equivalent to reverse-KL projection onto a Gibbs-reweighted target policy. This is the strongest safe ``RL vs distillation'' statement because it is an identity, not an analogy.
 \item \textbf{Current empirical read:} much of ordinary token-space RLVR looks more like distribution sharpening than support expansion. Several supplied papers show that strong gains can often be recovered by better sampling, online self-training, or best-of-N filtering plus distillation.
+\item \textbf{Athena-backed decision rule:} do not call a later result ``support expansion'' unless the post-RL policy emits trace-valid successful trajectories on a fixed hard slice that the pre-RL model still cannot recover under larger-k search and search-plus-distill controls.
 \item \textbf{Where RL still seems to matter:} when correct full trajectories are extremely rare, plain outcome-only RLVR is too weak. In that regime, denser credit assignment or more diversity-preserving exploration may add signal that fixed-trace imitation and sparse RL both miss.
 \end{enumerate}
 
@@ -123,6 +124,34 @@ So one part of what people call ``RL gain'' is often just the value of staying o
 \item In long-horizon agentic settings, on-policy learning may matter more than it does in single-turn math or code.
 \end{itemize}
 
+\subsection*{Athena-backed support-expansion rule}
+
+A narrow Athena follow-up on the same fixed evidence set sharpened the part that was still too vague in the first draft. The operational criterion is:
+
+\begin{quote}
+Only call a result ``support expansion'' if, on a fixed hard slice, the post-RL policy emits trace-valid successful trajectories at a non-trivial rate that the pre-RL model still cannot recover under larger-k search and positive-support distillation controls.
+\end{quote}
+
+The strongest evidence, ordered from stronger to weaker, is:
+
+\begin{enumerate}
+\item the base model still has near-zero success on the hard slice even after aggressive search, while the post-RL policy now succeeds directly;
+\item the gain survives best-of-N plus cloning and reward-free online self-training controls;
+\item the new successful traces live in clusters that were absent or vanishingly rare in base samples and early RL checkpoints;
+\item step-level trace validity improves, not only final-answer correctness;
+\item pass@1 rises without pass@k or diversity collapsing.
+\end{enumerate}
+
+What does \emph{not} count on its own:
+
+\begin{enumerate}
+\item higher final-answer accuracy alone;
+\item higher pass@1 when large-k base-model search already nearly matches it;
+\item the fact that RL found good trajectories at all, if search plus cloning can already recover them;
+\item gains reproduced by reward-free online self-training;
+\item longer or more natural-looking traces.
+\end{enumerate}
+
 \subsection*{What is still open}
 
 \begin{itemize}
@@ -159,6 +188,8 @@ What it does \emph{not} yet have is the mechanism surface we need. The first imp
 \item \textbf{Mostly-sharpening hypothesis:} on the current maze family, best-of-N plus cloning and reward-free online self-training will recover most of the pass@1 gain that sparse RLVR gets.
 \item \textbf{Credit-assignment hypothesis:} on harder maze regimes where base pass@k is near zero, dense step-wise feedback will beat sparse outcome-only RLVR.
 \item \textbf{Diversity hypothesis:} standard discrete RLVR will tend to improve pass@1 at the cost of pass@k, while any truly better exploration method must avoid that trade.
+\item \textbf{Search-control hypothesis:} if an apparent RL gain disappears once we add matched large-k search and best-of-N plus cloning controls, the original gain was mostly search amortization rather than new support.
+\item \textbf{Trace-validity hypothesis:} if final-answer gains appear without better trace validity on the hard slice, the method improved answer selection or concentration rather than the process object we care about.
 \item \textbf{Compression hypothesis:} if a gain is mostly due to better trajectory discovery rather than optimizer-specific magic, much of it should survive distillation back into a supervised dataset.
 \end{enumerate}
 
@@ -167,7 +198,7 @@ What it does \emph{not} yet have is the mechanism surface we need. The first imp
 The strongest current reading is not ``RL does nothing'' and not ``RL creates brand-new reasoning by default.'' It is more specific:
 
 \begin{quote}
-Current LLM RL often behaves like on-policy distribution shaping over capabilities that are already latent in the base model. The main exceptions appear when better data refresh, better verifier-filtered search, or better credit assignment materially change the learning problem. The maze project should be built to separate those ingredients one by one.
+Current LLM RL often behaves like on-policy distribution shaping over capabilities that are already latent in the base model. The main exceptions appear when better data refresh, better verifier-filtered search, or better credit assignment materially change the learning problem. The maze project should be built to separate those ingredients one by one, and it should only use ``support expansion'' language when matched search and distillation controls clearly fail.
 \end{quote}
 
 \section*{Sources}

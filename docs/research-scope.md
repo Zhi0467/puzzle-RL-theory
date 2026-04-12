@@ -1,6 +1,6 @@
 # Research Scope
 
-Last updated: 2026-04-10 00:45 UTC
+Last updated: 2026-04-12 02:57 UTC
 
 ## Core Question
 
@@ -35,12 +35,14 @@ This project is about principled understanding first, not leaderboard chasing. T
 - Exact objective identities or impossibility results with explicit assumptions.
 - Controlled comparisons that hold prompts, verifiers, and data freshness fixed.
 - Puzzle-domain experiments where both final correctness and reasoning-trace validity can be verified automatically.
+- On a fixed hard slice, post-RL wins that survive larger pre-RL sampling/search and positive-support distillation controls while also improving trace-valid success.
 
 ### Weak evidence
 
 - Benchmark gains without matched pass@k or diversity reporting.
 - Comparisons that change both optimizer and sampled data distribution.
 - Claims about “new reasoning” that only use final-answer accuracy.
+- Higher pass@1 that large-k base search, search-plus-cloning, or reward-free online self-training can already recover.
 
 ## Target Experimental Object
 

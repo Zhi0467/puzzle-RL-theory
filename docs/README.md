@@ -1,6 +1,6 @@
 # Puzzle RL Theory Docs
 
-Last updated: 2026-04-10 23:35 UTC
+Last updated: 2026-04-12 02:57 UTC
 
 ## Docs
 
@@ -11,4 +11,4 @@ Last updated: 2026-04-10 23:35 UTC
 
 ## Current collaborator-facing artifact
 
-- `../outputs/literature_review_2026-04-10/report.pdf` - first literature report and puzzle-program memo.
+- `../outputs/literature_review_2026-04-10/report.pdf` - refreshed Athena-backed literature report and puzzle-program memo.
