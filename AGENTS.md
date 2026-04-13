@@ -12,9 +12,9 @@ This repo studies what RL contributes beyond SFT in controllable puzzle domains.
 
 ## Sub-Session Instructions
 
-- Install: `pip install -r requirements.txt`
-- Smoke train: `python train.py --stage pretrain --max_iters 200 --n_train 500 --n_val 100`
-- Eval: `python eval.py --checkpoint checkpoints/<stage>_<optimizer>/ckpt_best.pt --n_eval 200`
+- Install: `python3 -m pip install -r requirements.txt`
+- Smoke train: `python3 train.py --stage pretrain --max_iters 200 --n_train 500 --n_val 100`
+- Eval: `python3 eval.py --checkpoint checkpoints/<stage>_<optimizer>/ckpt_best.pt --n_eval 200`
 - Current code surface is supervised only. Do not describe any RL result as repo-backed unless the code and artifacts exist in this repo.
 - Before changing training code, read `roadmap.md`, `docs/research-scope.md`, and `docs/current-code-surface.md`.
 
