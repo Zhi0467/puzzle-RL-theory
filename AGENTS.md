@@ -8,6 +8,7 @@ This repo studies what RL contributes beyond SFT in controllable puzzle domains.
 - `backlog.md` - open tasks, unresolved questions
 - `docs/README.md` - index of durable notes
 - `docs/research-scope.md` - core questions, hypotheses, and decision criteria
+- `docs/statistical-dynamics.md` - current statistics-first reframe and candidate observables
 - `docs/current-code-surface.md` - what the repo currently implements
 
 ## Sub-Session Instructions
@@ -22,4 +23,4 @@ This repo studies what RL contributes beyond SFT in controllable puzzle domains.
 
 - New to the project: read `roadmap.md`, then `docs/README.md`.
 - Working on theory/reporting: read `docs/research-scope.md`.
-- Working on experiments: read `docs/current-code-surface.md` and the latest roadmap activity entries.
+- Working on experiments: read `docs/statistical-dynamics.md`, `docs/current-code-surface.md`, and the latest roadmap activity entries.

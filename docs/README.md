@@ -1,6 +1,6 @@
 # Puzzle RL Theory Docs
 
-Last updated: 2026-04-12 05:22 UTC
+Last updated: 2026-04-24 23:06 UTC
 
 ## Docs
 
@@ -8,8 +8,10 @@ Last updated: 2026-04-12 05:22 UTC
 - `current-code-surface.md` - what the repo currently implements and what it does not.
 - `literature-map.md` - current theory and empirical read on RL vs SFT, exploration, and sampling.
 - `zero-kl-and-exploration.md` - follow-up note on `beta = 0`, SePT, on-policy supervision, and exploration-first algorithm families.
+- `statistical-dynamics.md` - current reframe: use a standard puzzle training pipeline to discover dynamical statistics, not to rank training methods.
 - `experiment-contract.md` - the first maze-based mechanism test plan.
 
 ## Current collaborator-facing artifact
 
-- `../outputs/literature_review_2026-04-10/report.pdf` - refreshed Athena-backed literature report and puzzle-program memo.
+- `../outputs/statistics_dynamics_reframe/report.pdf` - refreshed Athena-backed memo on the statistics-dynamics reframe.
+- `../outputs/literature_review_2026-04-10/report.pdf` - earlier Athena-backed literature report and puzzle-program memo.

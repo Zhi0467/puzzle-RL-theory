@@ -1,23 +1,26 @@
 # Puzzle Experiment Contract
 
-Last updated: 2026-04-12 05:22 UTC
+Last updated: 2026-04-24 23:06 UTC
 
 ## Goal
 
-Build a small, fully auditable puzzle pipeline that can tell apart:
+Build a small, fully auditable puzzle pipeline that can discover statistics
+whose training-time dynamics distinguish:
 
-1. fixed-dataset imitation,
-2. online self-improvement from self-generated data,
-3. verifier-filtered search plus distillation,
-4. on-policy supervision on model-generated rollouts,
-5. outcome-reward RL,
-6. dense step-wise credit assignment,
-7. and later diversity-preserving RL.
+1. random-valid-trajectory pretraining,
+2. solver-trace SFT,
+3. and REINFORCE-style binary-reward RL.
 
-The target question is not "which method gets the best benchmark number?" It is:
+The target question is not "which method gets the best benchmark number?" or
+"which train/test-time scaling trick works best?" It is:
 
-- when do we only sharpen an already-present solution distribution, and
-- when do we actually enlarge the set of successful trajectories available to the model?
+- which statistics behave like monotone entropy-like variables;
+- which statistics behave like nonmonotone complexity-like variables;
+- which statistics distinguish pretrain -> SFT from pretrain -> RL;
+- and which statistics survive null dynamics and artifact checks.
+
+The older support-expansion question remains downstream. First we need a
+trustworthy observable surface.
 
 ## Current repo reality
 
@@ -64,7 +67,94 @@ Maze graphs from the existing generator.
 6. base-model log-probability of each sampled trajectory;
 7. trace features needed for later diversity and compression analysis.
 
+### Standard branch split
+
+Use one shared pretrain checkpoint as the vessel:
+
+1. `pretrain`: random valid puzzle trajectories, not solver traces.
+2. `sft`: solver-trace supervision from the pretrain checkpoint.
+3. `reinforce`: sparse binary reward from the same pretrain checkpoint.
+4. Optimizer robustness branches: AdamW and Muon.
+
+Keep architecture, tokenizer/action format, generator, verifier, probe prompts,
+rollout count, temperature, max length, and checkpoint cadence fixed.
+
+### Measurement schedule
+
+At dense checkpoints, save:
+
+1. model weights and optimizer state;
+2. fixed-probe multi-sample rollouts;
+3. parsed puzzle-state traces;
+4. logits/logprobs and length-normalized base-pretrain logprob;
+5. reward and validity labels;
+6. a small activation dump on fixed prefix positions;
+7. optional matched-gradient diagnostics on a fixed microbatch.
+
+Plot statistics as time series aligned by optimizer step and, for RL, rollouts
+consumed. Final score tables are secondary.
+
+## First Statistics To Try
+
+### Statistic 1: trace-validity phase curve
+
+For every checkpoint:
+
+1. fraction of rollouts with all legal transitions;
+2. fraction that terminate correctly;
+3. invalid-action rate by step index;
+4. shortest-path regret and distance-to-target trajectory.
+
+Purpose: separate final-answer success from process validity and identify
+whether RL has a sudden validity transition that SFT does not.
+
+### Statistic 2: support occupancy entropy and first-visit rate
+
+For every checkpoint:
+
+1. entropy over visited graph states or state-action pairs;
+2. first-visit rate relative to pretrain rollouts;
+3. first-visit rate relative to earlier checkpoints;
+4. bootstrap intervals under fixed rollout budget.
+
+Purpose: detect exploration or support expansion before final reward rises.
+
+### Statistic 3: trajectory-cluster birth/death plus base logprob
+
+Cluster parsed trajectories, not raw strings. Track:
+
+1. cluster mass over time;
+2. newly born clusters above a fixed threshold;
+3. dead clusters below that threshold;
+4. successful clusters;
+5. length-normalized logprob under the original pretrain checkpoint.
+
+Purpose: distinguish amplification of early clusters from birth of new
+successful trajectory families.
+
+### Statistic 4: policy-field apparent complexity
+
+For a fixed set of coarse puzzle states, evaluate next-action distributions,
+quantize the resulting policy-field matrix, and compress it after puzzle-causal
+coarse-graining.
+
+Purpose: create a Coffee-Automaton-style candidate statistic. Early policies may
+be simple and local, intermediate policies may encode many contingencies, and
+late policies may compress again into a more deterministic strategy.
+
+Artifact checks:
+
+1. compression algorithm sweep;
+2. quantization sweep;
+3. row/column permutation controls;
+4. rollout-order shuffle;
+5. random legal-walk policy field.
+
 ## Baseline matrix
+
+This matrix is now a later control surface, not the first milestone. Introduce
+these branches only after the standard pretrain/SFT/RL vessel has produced
+candidate statistics worth stress-testing.
 
 ### Baseline A: fixed-data SFT
 
@@ -225,25 +315,29 @@ Call the regime "credit assignment limited" if:
 
 ## Implementation order
 
-1. Add multi-sample evaluation to the current maze repo:
+1. Add statistics-oriented logging to the current maze repo:
    - `k` rollouts,
    - pass@k,
+   - parsed state/action traces,
+   - trace-validity curves,
+   - support occupancy entropy,
+   - first-visit rates,
+   - trajectory-cluster birth/death,
    - diversity logging,
    - base-logprob logging.
-2. Add best-of-N filtering plus distillation.
-3. Add reward-free online self-training.
-4. Add on-policy supervision or distillation on student rollouts.
-5. Add sparse binary-outcome RLVR, with KL and zero-KL variants separated.
-6. Add dense step-wise reward baseline.
-7. Only then ask whether exploration-first or diversity-preserving RL is worth the extra complexity.
+2. Run the standard vessel: random-valid pretrain, solver-trace SFT, and binary-reward REINFORCE.
+3. Add policy-field apparent complexity and one representation-rank diagnostic.
+4. Run null and artifact checks.
+5. Only then add best-of-N filtering, reward-free self-training, on-policy supervision, KL/zero-KL RLVR, dense credit, or exploration-first methods as perturbations.
 
 ## What would count as a successful first stage
 
 The first stage succeeds if the repo can produce one clean figure or table answering:
 
-- how much of the observed gain comes from search/filtering,
-- how much comes from online refresh,
-- whether on-policy supervision already captures the remaining gain,
-- and whether sparse RL adds anything once those baselines are present.
+- which candidate statistics have robust time-series shapes;
+- which ones distinguish SFT from RL across AdamW and Muon;
+- which ones flatten under random-reward or local-validity nulls;
+- and which ones are artifacts of clustering, compression, temperature, or rollout budget.
 
-That is already enough to sharpen the scientific object before expanding to Sudoku or larger agentic settings.
+That is already enough to sharpen the scientific object before expanding the
+method grid, adding Sudoku, or claiming anything about support expansion.
