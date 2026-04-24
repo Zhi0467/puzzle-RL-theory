@@ -1,0 +1,173 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+
+\setlist[itemize]{leftmargin=1.2em,itemsep=0.25em,topsep=0.25em}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=0.25em,topsep=0.25em}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.65em}
+
+\title{Statistics-Dynamics Reframe for Puzzle RL Theory}
+\author{Murphy}
+\date{2026-04-24}
+
+\begin{document}
+\maketitle
+
+\section*{Correction}
+
+The scientific object should not be ``try several train/test-time scaling methods
+on a puzzle-pretrained transformer and see what works.'' The corrected object is
+to use a standard puzzle-training pipeline as a controlled dynamical system and
+discover statistics whose trajectories distinguish imitation-like learning from
+RL-like exploration or selection.
+
+For branch $m$, checkpoint $t$, fixed prompt set $P$, and rollouts
+$\tau \sim \pi_{m,t}(\cdot \mid x)$, the unit of analysis is a time series
+\[
+\Phi_m(t) =
+\operatorname{observable}(\{\tau_{x,i,t}\}, \text{logits}, \text{gradients},
+\text{activations}, \text{optimizer state}).
+\]
+The deliverable is a statistic or mathematical object with a reproducible,
+interpretable shape, not a final-score ranking.
+
+\section*{What the Coffee Automaton contributes}
+
+The relevant lesson from Aaronson, Carroll, and Ouellette's Coffee Automaton
+paper (arXiv:1405.6903) is methodological.
+
+\begin{enumerate}
+\item Use a simple controlled dynamics. The paper studies a small stochastic
+cellular automaton rather than a realistic fluid simulator. The puzzle analogue
+is a fixed generator, verifier, tokenizer, architecture, optimizer family, and
+checkpoint schedule.
+\item Separate entropy-like variables from complexity-like variables. Entropy
+can rise monotonically while apparent complexity rises and then falls. In the
+puzzle setting, loss, reward, and pass@1 may be necessary but not mechanistic.
+\item Tie coarse-graining to causal structure. The automaton uses local spatial
+coarse-graining. Maze and Sudoku statistics should be computed over parsed
+puzzle states, legal actions, constraints, and rollout prefixes, not raw token
+strings alone.
+\item Validate against null dynamics. The paper's interacting versus
+non-interacting comparison is the template. Puzzle nulls should preserve local
+surface structure while breaking global solution structure.
+\item Assume the first metric is artifact-prone. The paper finds and repairs a
+threshold artifact. Puzzle analogues include compression serialization, cluster
+thresholds, rollout budget, temperature, max length, action masks, and probe
+shortcuts.
+\end{enumerate}
+
+\section*{Standard pipeline vessel}
+
+The first pass should keep the training pipeline deliberately plain:
+
+\begin{enumerate}
+\item Pretrain on random valid puzzle trajectories.
+\item Branch to SFT on solver traces.
+\item Branch to REINFORCE-style RL with binary task reward.
+\item Run AdamW and Muon as robustness branches for the statistics.
+\end{enumerate}
+
+Architecture, tokenizer/action format, task generator, verifier, probe prompts,
+rollout count, temperature, max length, and checkpoint cadence should stay
+fixed. Search-plus-distill, SePT-style self-training, on-policy supervision,
+dense credit, KL/zero-KL RLVR, and exploration-first variants should be treated
+as later perturbations once candidate observables exist.
+
+\section*{Candidate objects}
+
+\textbf{Scalar and optimizer dynamics.}
+Track supervised loss, random-valid NLL, binary reward, legal-action entropy, KL
+to pretrain, gradient norms, update norms, SFT/RL gradient alignment, AdamW/Muon
+update effective rank, and Fisher or sharpness proxies. The interesting pattern
+would be a nonmonotone expansion/contraction object, for example update-rank or
+legal-action entropy, while reward or loss changes more monotonically.
+
+\textbf{Behavior and process dynamics.}
+Track pass@1, pass@k, trace-validity, final validity, optimality, invalid-action
+rate by step, legal branching factor, error correction, and time-to-first-success.
+A sharp distinction would be RL showing a first-success or invalid-action phase
+transition while SFT shows smoother trace imitation.
+
+\textbf{Exploration and support dynamics.}
+Track state/action coverage, first-visit rates, occupancy entropy, trajectory
+cluster birth/death, length-normalized base-pretrain logprob of successful
+rollouts, and the fraction of successes already found by large-k pretrain
+sampling. This is the most central family for support expansion versus
+sharpening.
+
+\textbf{Representation dynamics.}
+Track hidden-state effective rank, probe margins for state/action/future success,
+compression of quantized activations, policy-field apparent complexity, and
+light-cone-like prefix predictability:
+\[
+\widehat I \approx \operatorname{CE}(z_{>t}) -
+\operatorname{CE}(z_{>t} \mid h_{\leq t}),
+\]
+where $z_{>t}$ is a future event such as eventual success, next invalid action,
+or return to a shortest-path frontier. These are conjectural and should come
+after behavior logging is stable.
+
+\textbf{Algorithmic complexity proxies.}
+Track compressed description length of rollout sets, MDL of trajectory clusters,
+minimal automata or grammars over strategy traces, and normalized compression
+distance between checkpoints. These are closest in spirit to apparent complexity
+but easiest to corrupt with symbolization choices.
+
+\section*{First statistics to implement}
+
+Start with four high-value statistics:
+
+\begin{enumerate}
+\item \textbf{Trace-validity phase curve:} legal-transition rate, correct
+termination, invalid-action rate by step, shortest-path regret.
+\item \textbf{Support occupancy entropy and first-visit rate:} coverage over
+parsed puzzle states/actions under a fixed rollout budget.
+\item \textbf{Trajectory-cluster birth/death plus base logprob:} clusters over
+parsed trajectories, not raw strings, with length-normalized logprob under the
+pretrain checkpoint.
+\item \textbf{Policy-field apparent complexity:} evaluate next-action
+distributions over a fixed grid of coarse puzzle states, quantize, puzzle-causal
+coarse-grain, and compress.
+\end{enumerate}
+
+Then add one representation diagnostic, such as hidden-state effective rank or a
+prefix probe for future success.
+
+\section*{Nulls and artifact checks}
+
+Use random legal-walk policies, target-shuffled prompts, reward permutation,
+local-validity-only traces, corrupted solver traces, rollout-order shuffle,
+compression algorithm sweeps, quantization sweeps, temperature sweeps, and
+cluster-threshold sweeps. A statistic is not a candidate scientific object until
+it survives these checks.
+
+The desired first discovery is a statement of the form:
+
+\begin{quote}
+Policy-field apparent complexity rises and falls under RL but not SFT; the hump
+coincides with cluster birth and first-success transitions; it disappears under
+random-reward and local-validity nulls; and it is robust to compression and
+quantization choices.
+\end{quote}
+
+\section*{Thesis}
+
+The project is not trying to decide which post-training method wins on puzzles.
+It is using a standard puzzle-training pipeline as a vessel for discovering
+observables. Random-valid pretraining, solver-trace SFT, and binary-reward
+REINFORCE give three controlled branches of the same dynamical system. The
+scientific question is whether some statistic--support occupancy entropy,
+trajectory-cluster birth/death, base-logprob of successes, policy-field apparent
+complexity, representation rank, or prefix predictability--has a training-time
+shape that distinguishes SFT-like imitation from RL-like exploration/selection.
+A result matters only if the statistic is tied to puzzle causality, survives
+null variants and artifact checks, and explains a mechanism that final reward
+alone cannot show.
+
+\end{document}
